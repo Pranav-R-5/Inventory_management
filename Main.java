@@ -138,26 +138,30 @@ class Inventory extends Product{
         }
     }
 
-    static void purchase(int id,int quantity){
-        if(!map.containsKey(id)){
-            System.out.println("No product in the inventory with id "+id);
+    static synchronized void purchase(int id,int quantity){
 
-        }
-        else {
-            Product p = map.get(id);
-            if (quantity > p.product_quantity) {
-                System.out.println("there is only "+p.product_quantity+ "quantity availabe");
+        Product p = map.get(id);
+            if (map.containsKey(id)) {
+                if (quantity<= p.product_quantity) {
+                    // Simulate some processing time for the purchase
+                    try {
+                        Thread.sleep(1000);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+
+                    // Update inventory after successful purchase
+                     p.product_quantity -= quantity;
+
+                    System.out.println("Purchased " + quantity + " units of product " + p.product_Name);
+                    System.out.println("Remaining quantity: " + p.product_quantity);
+                    Inventory.updateLog(quantity + " of " +p.product_Name+" is purchased");
+                    Inventory.updatepurchases(quantity + " of " +p.product_Name+" is purchased");
+                }
+            } else {
+                System.out.println("Insufficient stock for product " + p.product_Name);
             }
-            else if(quantity<0){
-                System.out.println("Quantity can't be negative");
-            }
-            else {
-                p.product_quantity -= quantity;
-                System.out.println(p.product_Name + " is being purchased");
-                Inventory.updateLog(quantity + " of " +p.product_Name+" is purchased");
-                Inventory.updatepurchases(quantity + " of " +p.product_Name+" is purchased");
-            }
-        }
+
     }
 
     static void full_report(){
@@ -185,6 +189,24 @@ class Inventory extends Product{
             System.out.println(p.product_price*p.product_quantity);
             Inventory.updateLog("specific price report of inventory is viewed");
         }
+    }
+}
+
+
+class PurchaseThread extends Thread {
+    private Inventory inventory;
+    private int  productId;
+    private int quantity;
+
+    public PurchaseThread(Inventory inventory, int productId,int quant) {
+        this.inventory = inventory;
+        this.productId = productId;
+        this.quantity = quant;
+    }
+
+    @Override
+    public void run() {
+        inventory.purchase(productId,quantity);
     }
 }
 
@@ -238,7 +260,9 @@ public class Main {
                     System.out.println("Enter product quantity");
                     int p_quantity = sc.nextInt();
 
-                    inventory.purchase(p_id, p_quantity);
+                    Thread thread1=new PurchaseThread(inventory,p_id,p_quantity);
+                    thread1.start();
+                    //inventory.purchase(p_id, p_quantity);
                     break;
 
                 case 3:
